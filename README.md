@@ -1,10 +1,15 @@
-# archivist
+# Grand Archives
 
-Search and download public-domain books from the
+`archivist`: search and download public-domain books from the
 [Internet Archive](https://archive.org), as a Rust library and a small CLI.
 Built for [gideon](https://github.com/evanspn/gideon) on the Kobo, where it
-backs the in-app "Internet Archive" catalogue; standalone on purpose (no
-gideon dependency) so it lifts out into its own repository unchanged.
+backs the in-app "Internet Archive" catalogue (gideon issue #201); it began
+life in gideon's tree (gideon PR #186) and has no gideon dependency.
+
+```
+cargo install --path .          # desktop
+cross build --release --target armv7-unknown-linux-musleabihf   # Kobo
+```
 
 archive.org's OPDS feed (BookServer) is gone. Its JSON search and metadata
 endpoints are not, and they serve direct EPUB downloads for everything that

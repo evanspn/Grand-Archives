@@ -1,13 +1,10 @@
 [package]
 name = "archivist"
-description = "Search and download public-domain books from the Internet Archive"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
-
-# Standalone on purpose: no gideon crate is a dependency, so this lifts out
-# into its own repository unchanged.
+description = "Search and download public-domain books from the Internet Archive — a library and a CLI, built for gideon on the Kobo"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+repository = "https://github.com/evanspn/grand-archives"
 
 [lib]
 path = "src/lib.rs"
@@ -17,15 +14,21 @@ name = "archivist"
 path = "src/main.rs"
 
 [dependencies]
-thiserror.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-url.workspace = true
-ureq.workspace = true
-clap.workspace = true
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = { version = "2", features = ["serde"] }
+# Bundled Mozilla roots: the Kobo's own CA bundle is years stale.
+ureq = { version = "2", default-features = false, features = ["tls", "json"] }
+clap = { version = "4", features = ["derive"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-native-certs = "0.7"
 webpki-roots = "0.26"
 
 [dev-dependencies]
-tempfile.workspace = true
+tempfile = "3"
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 1
