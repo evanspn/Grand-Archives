@@ -102,7 +102,7 @@ impl Found {
 #[derive(Debug, Default)]
 pub struct FindReport {
     pub results: Vec<Found>,
-    pub failed: Vec<(Source, String)>,
+    pub failed: Vec<(Source, Error)>,
 }
 
 /// Lowercase letters and digits, single-spaced; leading articles dropped.
@@ -329,6 +329,14 @@ pub fn merge(query: &str, mut all: Vec<Found>, limit: usize) -> Vec<Found> {
     out
 }
 
+impl FindReport {
+    /// Whether no catalogue answered at all (as opposed to answering
+    /// "nothing"): the caller is offline, or everything is down.
+    pub fn all_failed(&self) -> bool {
+        self.results.is_empty() && self.failed.len() >= 3
+    }
+}
+
 impl<F: Fetcher> Client<F> {
     /// Point the Gutenberg search at another host (tests).
     pub fn with_gutendex_base(mut self, base: Url) -> Self {
@@ -397,7 +405,7 @@ impl<F: Fetcher> Client<F> {
         });
         match gutenberg {
             Ok(found) => all.extend(found),
-            Err(e) => report.failed.push((Source::Gutenberg, e.to_string())),
+            Err(e) => report.failed.push((Source::Gutenberg, e)),
         }
 
         let open_library = self.open_library_url(query).and_then(|url| {
@@ -409,7 +417,7 @@ impl<F: Fetcher> Client<F> {
         });
         match open_library {
             Ok(found) => all.extend(found),
-            Err(e) => report.failed.push((Source::OpenLibrary, e.to_string())),
+            Err(e) => report.failed.push((Source::OpenLibrary, e)),
         }
 
         let opts = SearchOptions {
@@ -417,17 +425,24 @@ impl<F: Fetcher> Client<F> {
             ..Default::default()
         };
         match self.search(query, &opts) {
-            Ok(page) => all.extend(page.hits.into_iter().map(|h| Found {
-                source: Source::InternetArchive,
-                title: h.title,
-                author: h.creator,
-                year: h.year,
-                language: h.language,
-                popularity: h.downloads,
-                epub: None,
-                archive_ids: vec![h.identifier],
-            })),
-            Err(e) => report.failed.push((Source::InternetArchive, e.to_string())),
+            // archive.org's format filter counts derivatives, so check the
+            // hit itself: a scan with only a PDF is not a book to offer.
+            Ok(page) => all.extend(
+                page.hits
+                    .into_iter()
+                    .filter(|h| h.has_epub())
+                    .map(|h| Found {
+                        source: Source::InternetArchive,
+                        title: h.title,
+                        author: h.creator,
+                        year: h.year,
+                        language: h.language,
+                        popularity: h.downloads,
+                        epub: None,
+                        archive_ids: vec![h.identifier],
+                    }),
+            ),
+            Err(e) => report.failed.push((Source::InternetArchive, e)),
         }
 
         report.results = merge(query, all, limit);
