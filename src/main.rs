@@ -16,7 +16,7 @@ use archivist::{Client, SearchOptions, Sort};
 #[command(
     name = "archivist",
     version,
-    about = "Search and download public-domain books from the Internet Archive"
+    about = "Find and download free books: one search across Project Gutenberg, Open Library and the Internet Archive"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -25,7 +25,25 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Search by title or author.
+    /// One search across every free catalogue, best copy first.
+    Find {
+        query: Vec<String>,
+        /// How many results to show.
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+    },
+    /// Find a book and download its EPUB in one step: the top match, or
+    /// the one `--pick` names from `find`'s list.
+    Grab {
+        query: Vec<String>,
+        /// Books folder (/mnt/onboard/Books on a Kobo).
+        #[arg(long, default_value = ".")]
+        out: PathBuf,
+        /// Which result to take (1 = the top match).
+        #[arg(long, default_value_t = 1)]
+        pick: usize,
+    },
+    /// Search the Internet Archive alone, by title or author.
     Search {
         query: Vec<String>,
         /// Results per page.
@@ -81,6 +99,46 @@ fn main() -> ExitCode {
 fn run(cli: Cli) -> archivist::Result<()> {
     let client = Client::new();
     match cli.command {
+        Command::Find { query, limit } => {
+            let report = client.find(&query.join(" "), limit);
+            warn_failed(&report);
+            if report.results.is_empty() {
+                println!("nothing found");
+            }
+            for (i, f) in report.results.iter().enumerate() {
+                println!("{:>2}. {}", i + 1, f.label());
+                println!("    {}", f.source.name());
+            }
+        }
+        Command::Grab { query, out, pick } => {
+            let query = query.join(" ");
+            let report = client.find(&query, pick.max(1) + 4);
+            warn_failed(&report);
+            // Start at the pick; if that copy will not download, fall
+            // through to the next best rather than hand back nothing.
+            let mut last = archivist::Error::NoFile {
+                identifier: query.clone(),
+                what: "free EPUB anywhere",
+            };
+            for found in report.results.iter().skip(pick.saturating_sub(1)) {
+                eprintln!("{} · {}", found.label(), found.source.name());
+                match client.grab(found, &out) {
+                    Ok((path, true)) => {
+                        println!("already here: {}", path.display());
+                        return Ok(());
+                    }
+                    Ok((path, false)) => {
+                        println!("saved {}", path.display());
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        eprintln!("  no luck there ({e}); trying the next");
+                        last = e;
+                    }
+                }
+            }
+            return Err(last);
+        }
         Command::Search {
             query,
             rows,
@@ -167,6 +225,12 @@ fn run(cli: Cli) -> archivist::Result<()> {
         }
     }
     Ok(())
+}
+
+fn warn_failed(report: &archivist::FindReport) {
+    for (source, why) in &report.failed {
+        eprintln!("({} did not answer: {why})", source.name());
+    }
 }
 
 fn print_hits(page: &archivist::SearchPage) {

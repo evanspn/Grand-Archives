@@ -1,7 +1,24 @@
 # Grand Archives
 
-`archivist`: search and download public-domain books from the
-[Internet Archive](https://archive.org), as a Rust library and a small CLI.
+`archivist`: find and download free books, as a Rust library and a small
+CLI. One search asks [Project Gutenberg](https://www.gutenberg.org) (through
+Gutendex), [Open Library](https://openlibrary.org) and the
+[Internet Archive](https://archive.org), merges the answers into one list
+with the best copy of each book first, and one command downloads it:
+
+```
+archivist find the time machine                   # every catalogue, one list
+archivist grab the time machine --out /mnt/onboard/Books   # find + download the top match
+archivist grab moby dick --pick 3 --out .         # or the third result
+```
+
+Gutenberg's proofread EPUBs rank above the Archive's raw scans, the same
+book from two catalogues is one row, and a catalogue that is down is
+reported while the others still answer. Only free, legally distributable
+books are searched: public-domain texts and public scans, never the
+lending library.
+
+The single-catalogue commands below still work.
 Built for [gideon](https://github.com/evanspn/gideon) on the Kobo, where it
 backs the in-app "Internet Archive" catalogue (gideon issue #201); it began
 life in gideon's tree (gideon PR #186) and has no gideon dependency.

@@ -19,8 +19,10 @@ use std::path::{Path, PathBuf};
 use url::Url;
 
 pub mod fetch;
+pub mod find;
 
 pub use fetch::{FakeFetcher, Fetcher, UreqFetcher};
+pub use find::{FindReport, Found, Source};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -214,8 +216,11 @@ impl Item {
 
 /// The archive.org client.
 pub struct Client<F: Fetcher> {
-    fetcher: F,
+    pub(crate) fetcher: F,
     base: Url,
+    pub(crate) gutendex: Url,
+    pub(crate) open_library: Url,
+    pub(crate) gutenberg: Url,
 }
 
 impl Client<UreqFetcher> {
@@ -235,6 +240,9 @@ impl<F: Fetcher> Client<F> {
         Self {
             fetcher,
             base: Url::parse(DEFAULT_BASE).expect("constant URL"),
+            gutendex: Url::parse(find::GUTENDEX_BASE).expect("constant URL"),
+            open_library: Url::parse(find::OPEN_LIBRARY_BASE).expect("constant URL"),
+            gutenberg: Url::parse(find::GUTENBERG_BASE).expect("constant URL"),
         }
     }
 

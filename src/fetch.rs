@@ -37,7 +37,13 @@ impl UreqFetcher {
         let tls = rustls::ClientConfig::builder()
             .with_root_certificates(roots)
             .with_no_client_auth();
+        // A stalled catalogue must fail, not hang: the unified search asks
+        // several, and one that never answers would hold up the rest. The
+        // read timeout is per read, so a large download that keeps flowing
+        // is never cut off.
         let agent = ureq::AgentBuilder::new()
+            .timeout_connect(std::time::Duration::from_secs(10))
+            .timeout_read(std::time::Duration::from_secs(25))
             .user_agent(concat!("archivist/", env!("CARGO_PKG_VERSION")))
             .tls_config(std::sync::Arc::new(tls))
             .build();

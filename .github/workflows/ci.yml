@@ -24,7 +24,7 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
       - name: CLI answers
-        run: cargo run -q -- --help | grep -F "Internet Archive"
+        run: cargo run -q -- --help | grep -F "Project Gutenberg"
 
   kobo:
     name: Cross-check (Kobo armv7)
