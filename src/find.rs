@@ -420,11 +420,7 @@ impl<F: Fetcher> Client<F> {
             Err(e) => report.failed.push((Source::OpenLibrary, e)),
         }
 
-        let opts = SearchOptions {
-            rows: 15,
-            ..Default::default()
-        };
-        match self.search(query, &opts) {
+        match self.search(query, &SearchOptions::default()) {
             // archive.org's format filter counts derivatives, so check the
             // hit itself: a scan with only a PDF is not a book to offer.
             Ok(page) => all.extend(
@@ -522,10 +518,7 @@ mod tests {
     fn client() -> Client<FakeFetcher> {
         let probe = Client::with_fetcher(FakeFetcher::new());
         let q = "the time machine";
-        let opts = SearchOptions {
-            rows: 15,
-            ..Default::default()
-        };
+        let opts = SearchOptions::default();
         let fetcher = FakeFetcher::new()
             .with(probe.gutendex_url(q).unwrap().as_str(), GUTENDEX)
             .with(probe.open_library_url(q).unwrap().as_str(), OPEN_LIBRARY)
